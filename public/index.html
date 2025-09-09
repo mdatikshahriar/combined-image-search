@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Image Search</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+        
+        .search-section {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+        }
+        
+        .search-box {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            font-size: 16px;
+            min-width: 300px;
+            transition: border-color 0.3s ease;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        button {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            background: linear-gradient(135deg, #2980b9, #21618c);
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .options {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        select {
+            padding: 10px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .sources-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .results-info {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .results-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #3498db;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+            padding: 20px 0;
+        }
+        
+        .image-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .image-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+        }
+        
+        .image-container {
+            position: relative;
+            height: 220px;
+            overflow: hidden;
+        }
+        
+        .image-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .image-card:hover img {
+            transform: scale(1.05);
+        }
+        
+        .source-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .copyright-badge {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .copyright-free { background: #27ae60; }
+        .copyright-attribution { background: #f39c12; }
+        .copyright-restricted { background: #e74c3c; }
+        .copyright-unknown { background: #95a5a6; }
+        
+        .image-info {
+            padding: 20px;
+        }
+        
+        .image-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #2c3e50;
+            font-size: 15px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .image-details {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        
+        .copyright-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 12px;
+        }
+        
+        .copyright-status {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .copyright-desc {
+            color: #666;
+            line-height: 1.3;
+        }
+        
+        .download-btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 14px;
+            background: linear-gradient(135deg, #27ae60, #229954);
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        
+        .download-btn:hover {
+            background: linear-gradient(135deg, #229954, #1e8449);
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #e74c3c;
+            font-size: 16px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .error-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        
+        .source-breakdown {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .source-count {
+            background: #e9ecef;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        /* Add these styles in the <style> section */
+        .filters-section {
+            background: white;
+            padding: 25px 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+
+        .filters-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .filters-header h3 {
+            color: #2c3e50;
+            margin: 0;
+            font-size: 1.3rem;
+        }
+
+        .clear-filters-btn {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .clear-filters-btn:hover {
+            background: linear-gradient(135deg, #c0392b, #a93226);
+            transform: translateY(-1px);
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-group label {
+            font-size: 14px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .filter-group select {
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        /* Replace the multi-select CSS with this: */
+        .multi-select-container {
+            position: relative;
+        }
+
+        .multi-select-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+            user-select: none;
+        }
+
+        .multi-select-header:hover {
+            border-color: #3498db;
+        }
+
+        .multi-select-header.active {
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .multi-select-text {
+            flex: 1;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .multi-select-arrow {
+            transition: transform 0.3s ease;
+            color: #666;
+        }
+
+        .multi-select-header.active .multi-select-arrow {
+            transform: rotate(180deg);
+        }
+
+        .multi-select-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #3498db;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .multi-select-dropdown.show {
+            display: block;
+        }
+
+        .multi-select-option {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            font-size: 14px;
+            user-select: none;
+        }
+
+        .multi-select-option:hover {
+            background-color: #f8f9fa;
+        }
+
+        .multi-select-option input[type="checkbox"] {
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .active-filters {
+            padding-top: 15px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .filters-label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-right: 10px;
+        }
+
+        .filter-tags {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .filter-tag {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .filter-tag-remove {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .filter-tag-remove:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .filtered-count {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .search-box {
+                flex-direction: column;
+            }
+            
+            input[type="text"] {
+                min-width: 100%;
+            }
+            
+            .options {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .results-stats {
+                gap: 20px;
+            }
+            
+            .image-grid {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Universal Image Search</h1>
+            <p>Search high-quality images from multiple sources with copyright information</p>
+        </div>
+        
+        <div class="search-section">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search for images (e.g., nature, technology, food)..." />
+                <button id="searchBtn">Search Images</button>
+            </div>
+            
+            <div class="options">
+                <label for="imageCount"><strong>Results:</strong></label>
+                <select id="imageCount">
+                    <option value="50">50 images</option>
+                    <option value="100" selected>100 images</option>
+                    <option value="150">150 images</option>
+                    <option value="200">200 images</option>
+                </select>
+            </div>
+            <!-- Add this new section after the existing options div -->
+            <div class="filters-section">
+                <div class="filters-header">
+                    <h3>Filters</h3>
+                    <button id="clearFilters" class="clear-filters-btn">Clear All</button>
+                </div>
+                
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label><strong>Source:</strong></label>
+                        <div class="multi-select-container">
+                            <div class="multi-select-header" id="sourceFilterHeader">
+                                <span class="multi-select-text">All Sources</span>
+                                <span class="multi-select-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-dropdown" id="sourceFilterDropdown">
+                                <label class="multi-select-option">
+                                    <input type="checkbox" value="Wikimedia Commons"> Wikimedia Commons
+                                </label>
+                                <label class="multi-select-option">
+                                    <input type="checkbox" value="Pexels"> Pexels
+                                </label>
+                                <label class="multi-select-option">
+                                    <input type="checkbox" value="Google Images"> Google Images
+                                </label>
+                                <label class="multi-select-option">
+                                    <input type="checkbox" value="Bing Images"> Bing Images
+                                </label>
+                                <label class="multi-select-option">
+                                    <input type="checkbox" value="Unsplash"> Unsplash
+                                </label>
+                                <label class="multi-select-option">
+                                    <input type="checkbox" value="Pixabay"> Pixabay
+                                </label>
+                                <label class="multi-select-option">
+                                    <input type="checkbox" value="DuckDuckGo Images"> DuckDuckGo Images
+                                </label>
+                                <label class="multi-select-option">
+                                    <input type="checkbox" value="Lorem Picsum"> Lorem Picsum
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="resolutionFilter"><strong>Resolution:</strong></label>
+                        <select id="resolutionFilter">
+                            <option value="">All Resolutions</option>
+                            <option value="small">Small (< 800px)</option>
+                            <option value="medium">Medium (800px - 1920px)</option>
+                            <option value="large">Large (1920px - 4000px)</option>
+                            <option value="extra-large">Extra Large (> 4000px)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="orientationFilter"><strong>Orientation:</strong></label>
+                        <select id="orientationFilter">
+                            <option value="">All Orientations</option>
+                            <option value="landscape">Landscape</option>
+                            <option value="portrait">Portrait</option>
+                            <option value="square">Square</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="copyrightFilter"><strong>Usage Rights:</strong></label>
+                        <select id="copyrightFilter">
+                            <option value="">All Rights</option>
+                            <option value="free">Free to Use</option>
+                            <option value="attribution">Requires Attribution</option>
+                            <option value="commercial">Commercial Use OK</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="active-filters" id="activeFilters" style="display: none;">
+                    <span class="filters-label">Active filters:</span>
+                    <div class="filter-tags" id="filterTags"></div>
+                </div>
+            </div>
+            
+            <div class="sources-info">
+                <strong>Sources:</strong> Wikimedia Commons, Pexels, Pixabay, Google Images, Bing Images, DuckDuckGo Images, Lorem Picsum, and Unsplash
+                <br><small>All images include detailed copyright and usage information</small>
+            </div>
+        </div>
+        
+        <div id="loadingDiv" class="loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <div>Searching images from multiple sources...</div>
+        </div>
+        
+        <div id="resultsInfo" class="results-info" style="display: none;">
+            <div id="resultsText"></div>
+            <div class="results-stats">
+                <div class="stat-item">
+                    <div class="stat-number" id="totalImages">0</div>
+                    <div class="stat-label">Total Images</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="freeImages">0</div>
+                    <div class="stat-label">Free to Use</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="sourcesUsed">0</div>
+                    <div class="stat-label">Sources</div>
+                </div>
+            </div>
+            <div class="source-breakdown" id="sourceBreakdown"></div>
+        </div>
+        
+        <div id="imageGrid" class="image-grid"></div>
+        
+        <div id="errorDiv" class="error" style="display: none;">
+            <div class="error-icon">⚠️</div>
+            <div id="errorText"></div>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="script.js"></script>
+</body>
+</html>
