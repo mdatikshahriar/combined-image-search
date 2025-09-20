@@ -213,9 +213,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Filter results
         let filteredResults = allSearchResults.filter(image => {
-            // Source filter
-            if (currentFilters.source.length > 0 && !currentFilters.source.includes(image.source)) {
-                return false;
+            // Source filter - check if any of the image's sources match the filter
+            if (currentFilters.source.length > 0) {
+                const imageSources = image.sources || [image.source];
+                const hasMatchingSource = imageSources.some(source => currentFilters.source.includes(source));
+                if (!hasMatchingSource) {
+                    return false;
+                }
             }
 
             // Resolution filter
@@ -450,12 +454,19 @@ document.addEventListener('DOMContentLoaded', function() {
         card.innerHTML = `
             <div class="image-container">
                 <img src="${image.url}" alt="${image.title}" loading="lazy" 
-                     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjIyMCIgdmlld0JveD0iMCAwIDMyMCAyMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMjAiIGhlaWdodD0iMjIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNjAgMTEwTDE0MCA5MEwxMjAgMTEwTDE0MCA5MEwxNjAgMTEwWiIgZmlsbD0iIzlDQTNBRiIvPgo8dGV4dCB4PSIxNjAiIHk9IjE0MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzlDQTNBRiIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIj5JbWFnZSBub3QgYXZhaWxhYmxlPC90ZXh0Pgo8L3N2Zz4K'" />
-                <div class="source-badge">${image.source}</div>
+                    onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjIyMCIgdmlld0JveD0iMCAwIDMyMCAyMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMjAiIGhlaWdodD0iMjIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNjAgMTEwTDE0MCA5MEwxMjAgMTEwTDE0MCA5MEwxNjAgMTEwWiIgZmlsbD0iIzlDQTNBRiIvPgo8dGV4dCB4PSIxNjAiIHk9IjE0MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzlDQTNBRiIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIj5JbWFnZSBub3QgYXZhaWxhYmxlPC90ZXh0Pgo8L3N2Zz4K'" />
+                ${image.sourceCount > 1 ? 
+                    `<div class="multiple-sources-badge">${image.sourceCount} sources</div>` : 
+                    `<div class="source-badge">${image.source}</div>`
+                }
                 <div class="copyright-badge ${getCopyrightBadgeClass()}">${getCopyrightBadgeText()}</div>
             </div>
             <div class="image-info">
-                <div class="image-title">${image.title}</div>
+                <div class="image-title">${image.originalTitle || image.title}</div>
+                ${image.sourceCount > 1 ? 
+                    `<div class="sources-list"><strong>Found on:</strong> ${image.sources.join(', ')}</div>` : 
+                    ``
+                }
                 <div class="image-details">
                     <strong>Photographer:</strong> ${image.photographer}<br>
                     <strong>Size:</strong> ${image.width} × ${image.height} (${image.size})
@@ -468,27 +479,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     <button class="download-btn" data-action="download" data-id="${image.id}" data-url="${encodeURIComponent(image.downloadUrl)}">
                         📥 Download
                     </button>
-                    <button class="download-btn view-btn" data-action="view" data-url="${encodeURIComponent(image.downloadUrl)}" data-title="${encodeURIComponent(image.title)}">
-                        👁️ View
-                    </button>
+                    <a href="/view/${image.hashedId}" target="_blank" class="download-btn view-btn">
+                        👁️ View Image
+                    </a>
                 </div>
             </div>
         `;
         
-        // Add event listeners for the buttons
+        // Add event listener for the download button only (View is now a link)
         const downloadBtn = card.querySelector('[data-action="download"]');
-        const viewBtn = card.querySelector('[data-action="view"]');
         
         downloadBtn.addEventListener('click', function() {
             const id = this.getAttribute('data-id');
             const url = this.getAttribute('data-url');
             downloadImage(id, url);
-        });
-        
-        viewBtn.addEventListener('click', function() {
-            const url = this.getAttribute('data-url');
-            const title = this.getAttribute('data-title');
-            viewImage(url, title);
         });
         
         return card;
@@ -498,103 +502,65 @@ document.addEventListener('DOMContentLoaded', function() {
     async function downloadImage(id, url) {
         try {
             const decodedUrl = decodeURIComponent(url);
+            
+            // Show download progress
+            const button = document.querySelector(`[data-id="${id}"]`);
+            const originalText = button.textContent;
+            button.textContent = 'Downloading...';
+            button.disabled = true;
+            
             const response = await fetch(`/api/download/${id}?url=${encodeURIComponent(decodedUrl)}`);
             
             if (!response.ok) {
-                throw new Error('Download failed');
+                const errorData = await response.json().catch(() => ({ error: 'Download failed' }));
+                throw new Error(errorData.error || 'Download failed');
             }
             
             const blob = await response.blob();
+            
+            // Determine file extension from content type or URL
+            const contentType = response.headers.get('content-type');
+            let extension = 'jpg';
+            if (contentType) {
+                if (contentType.includes('png')) extension = 'png';
+                else if (contentType.includes('gif')) extension = 'gif';
+                else if (contentType.includes('webp')) extension = 'webp';
+            } else {
+                const urlMatch = decodedUrl.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i);
+                if (urlMatch) extension = urlMatch[1];
+            }
+            
             const downloadUrl = window.URL.createObjectURL(blob);
             
             const link = document.createElement('a');
             link.href = downloadUrl;
-            link.download = `${id}.jpg`;
+            link.download = `${id}.${extension}`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             
             window.URL.revokeObjectURL(downloadUrl);
+            
+            // Reset button
+            button.textContent = originalText;
+            button.disabled = false;
+            
         } catch (error) {
             console.error('Download error:', error);
-            alert('Failed to download image. Please try again.');
+            
+            // Reset button on error
+            const button = document.querySelector(`[data-id="${id}"]`);
+            if (button) {
+                button.textContent = '📥 Download';
+                button.disabled = false;
+            }
+            
+            // Show user-friendly error message
+            alert(`Download failed: ${error.message}. Please try again or check your connection.`);
         }
-    }
-
-    function viewImage(url, title) {
-        const decodedUrl = decodeURIComponent(url);
-        const decodedTitle = decodeURIComponent(title);
-        
-        // Create a new tab with the full-size image
-        const newTab = window.open('', '_blank');
-        newTab.document.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>${decodedTitle}</title>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                    body {
-                        margin: 0;
-                        padding: 20px;
-                        background: #000;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        min-height: 100vh;
-                        font-family: Arial, sans-serif;
-                    }
-                    .container {
-                        text-align: center;
-                        max-width: 100%;
-                        max-height: 100%;
-                    }
-                    img {
-                        max-width: 100%;
-                        max-height: calc(100vh - 100px);
-                        object-fit: contain;
-                        border-radius: 8px;
-                        box-shadow: 0 4px 20px rgba(255,255,255,0.1);
-                    }
-                    .title {
-                        color: white;
-                        margin-bottom: 20px;
-                        font-size: 1.2rem;
-                        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-                    }
-                    .loading {
-                        color: white;
-                        font-size: 1.1rem;
-                    }
-                    .error {
-                        color: #ff6b6b;
-                        font-size: 1.1rem;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="title">${decodedTitle}</div>
-                    <div class="loading">Loading image...</div>
-                    <img src="${decodedUrl}" alt="${decodedTitle}" id="mainImage" />
-                </div>
-                <script>
-                    document.getElementById('mainImage').addEventListener('load', function() {
-                        document.querySelector('.loading').style.display = 'none';
-                    });
-                    document.getElementById('mainImage').addEventListener('error', function() {
-                        const loading = document.querySelector('.loading');
-                        loading.textContent = 'Failed to load image';
-                        loading.className = 'error';
-                    });
-                </script>
-            </body>
-            </html>
-        `);
     }
 
     // Make functions available globally for any remaining inline handlers
     window.downloadImage = downloadImage;
-    window.viewImage = viewImage;
     window.removeFilter = removeFilter;
 });

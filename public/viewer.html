@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Viewer</title>
+    <link rel="stylesheet" href="/css/viewer.css">
+</head>
+<body>
+    <div class="header">
+        <h1>Image Viewer</h1>
+    </div>
+    
+    <div class="image-container">
+        <div class="loading">
+            <div class="spinner"></div>
+            Loading image...
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button class="btn btn-primary" id="downloadBtn" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7,10 12,15 17,10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Download Image
+        </button>
+        
+        <button class="btn btn-secondary" id="websiteBtn" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15,3 21,3 21,9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+            Go to Website
+        </button>
+    </div>
+    
+    <div class="image-info" id="imageInfo" style="display: none;">
+        <h3>Image Details</h3>
+        <p id="imageTitle"></p>
+        <p id="imageSource"></p>
+        <p id="imageDimensions"></p>
+    </div>
+    
+    <script src="/js/viewer.js"></script>
+</body>
+</html>
