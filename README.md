@@ -1,64 +1,121 @@
 # Universal Image Search App - Complete Setup Guide
 
-This is a complete image search application that fetches high-quality images from multiple sources with detailed copyright information.
+A comprehensive image search application that fetches high-quality images from multiple sources with detailed copyright information, advanced filtering, and intelligent deduplication.
 
-## 🌟 Features
+## 🌟 Key Features
 
-- **Multiple Sources**: Unsplash, Pixabay, Pexels, Wikimedia Commons
-- **Copyright Information**: Detailed licensing info for each image
-- **High Quality**: Full resolution downloads
-- **CORS Bypass**: Backend proxy handles API restrictions
+### **Multi-Source Search**
+- **7 Different Sources**: Google Images, Bing Images, DuckDuckGo Images, Wikimedia Commons, Pexels, Pixabay, and Unsplash
+- **Concurrent Processing**: All sources searched simultaneously for maximum speed
+- **Intelligent Fallbacks**: Automatic fallback strategies ensure consistent results
+
+### **Advanced Image Management**
+- **Smart Deduplication**: Removes duplicate images while preserving the best quality versions
+- **Source Merging**: Tracks when the same image appears across multiple sources
+- **Copyright Information**: Detailed licensing info for every image
+- **High-Quality Downloads**: Full resolution images with proper file naming
+
+### **Powerful Filtering System**
+- **Source Filtering**: Filter by specific image sources
+- **Resolution Filtering**: Small, Medium, Large, Extra Large categories
+- **Orientation Filtering**: Landscape, Portrait, Square options  
+- **Usage Rights Filtering**: Free to use, Attribution required, Commercial use
+- **Real-time Filter Application**: Instant results without re-searching
+
+### **Enhanced User Experience**
+- **Responsive Design**: Works perfectly on desktop and mobile
+- **Image Viewer**: Dedicated viewer with download and source links
+- **Progress Tracking**: Real-time search progress and statistics
+- **Error Handling**: Comprehensive error handling with user-friendly messages
+- **Performance Metrics**: Detailed search performance statistics
+
+### **Developer Features**
 - **Rate Limiting**: Built-in protection against abuse
-- **Responsive Design**: Works on desktop and mobile
-- **Free to Use**: No paid APIs required (free tiers available)
+- **Comprehensive Logging**: Detailed logs for debugging and monitoring
+- **Health Monitoring**: System health checks and API status monitoring
+- **Test Endpoints**: Individual source testing capabilities
+- **CORS Handling**: Proper cross-origin request handling
 
 ## 📋 Prerequisites
 
-- Node.js 16+ installed
-- API keys (free) from image providers
+- **Node.js 18+** installed on your system
+- **NPM** package manager (comes with Node.js)
+- API keys from image providers (free tiers available)
 - Basic knowledge of running Node.js applications
 
-## 🚀 Quick Start
+## 🚀 Complete Setup Instructions
 
-### 1. Project Structure
-Create the following folder structure:
+### 1. Project Structure Setup
+
+Create your project directory and files:
+
+```bash
+mkdir image-search-app
+cd image-search-app
+
+# Create the required directory structure
+mkdir public
+mkdir public/css
+mkdir public/js
+```
+
+Your final structure should look like this:
 ```
 image-search-app/
-├── server.js          (Backend proxy server)
-├── package.json       (Dependencies)
+├── index.js           (Main server file)
+├── package.json       (Dependencies and scripts)
 ├── .env              (Environment variables)
+├── README.md         (This file)
 ├── public/
-│   └── index.html    (Frontend application)
-└── README.md
+│   ├── index.html    (Main web interface)
+│   ├── viewer.html   (Image viewer page)
+│   ├── css/
+│   │   ├── main.css
+│   │   └── viewer.css
+│   └── js/
+│       ├── main.js
+│       └── viewer.js
 ```
 
-### 2. Backend Setup
+### 2. Install Dependencies
 
-#### Install Dependencies
 ```bash
+# Initialize NPM project
+npm init -y
+
+# Install production dependencies
 npm install express cors axios express-rate-limit helmet puppeteer dotenv
+
+# Install development dependencies  
 npm install -D nodemon
 ```
 
-#### Get Free API Keys
+### 3. Get Free API Keys
 
-**Unsplash API** (30,000 requests/month free)
+#### **Unsplash API** (50 requests/hour free)
 1. Go to https://unsplash.com/developers
 2. Create an account and new application
-3. Copy your Access Key
+3. Copy your **Access Key**
+4. Note: Provides high-quality professional photos
 
-**Pixabay API** (Unlimited free requests)
+#### **Pixabay API** (5,000 requests/month free) 
 1. Go to https://pixabay.com/api/docs/
 2. Create account and get API key
-3. Copy your API key
+3. Copy your **API key**
+4. Note: Large collection with various image types
 
-**Pexels API** (200 requests/hour free)
+#### **Pexels API** (200 requests/hour free)
 1. Go to https://www.pexels.com/api/
-2. Create account and generate API key
-3. Copy your API key
+2. Create account and generate API key  
+3. Copy your **API key**
+4. Note: High-quality stock photos
 
-#### Environment Variables
-Create `.env` file:
+**Note**: Web scraping sources (Google Images, Bing Images, DuckDuckGo Images, Wikimedia Commons) don't require API keys.
+
+### 4. Environment Configuration
+
+Create a `.env` file in your project root:
+
 ```env
 # API Keys (replace with your actual keys)
 UNSPLASH_ACCESS_KEY=your_unsplash_access_key_here
@@ -67,213 +124,422 @@ PEXELS_KEY=your_pexels_key_here
 
 # Server Configuration
 PORT=3001
-NODE_ENV=production
+NODE_ENV=development
+
+# Security (change in production)
+IMAGE_ENCRYPTION_KEY=your-secure-encryption-key-change-in-production-32chars
 ```
 
-#### Start Backend Server
+### 5. Add Package.json Scripts
+
+Update your `package.json` to include:
+
+```json
+{
+  "name": "image-search-app",
+  "version": "1.0.0",
+  "description": "Universal Image Search with Multiple Sources",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "axios": "^1.12.2",
+    "cors": "^2.8.5", 
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "puppeteer": "^24.22.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
+```
+
+### 6. Copy Application Files
+
+You'll need to copy these files from the project (provided in the documents):
+- `index.js` (main server file)
+- `public/index.html` (main web interface)
+- `public/viewer.html` (image viewer)
+
+Create the CSS and JavaScript files for the frontend (you'll need to create these based on the HTML structure shown).
+
+### 7. Start the Application
+
 ```bash
-# Development mode with auto-reload
+# Development mode (auto-restarts on file changes)
 npm run dev
 
 # Production mode
 npm start
 ```
 
-Server will run on http://localhost:3001
+The server will start on http://localhost:3001
 
-### 3. Frontend Setup
+### 8. Access the Application
 
-Save the HTML file as `public/index.html` and open it in a browser, or serve it using:
+- **Main Search Interface**: http://localhost:3001
+- **Health Check**: http://localhost:3001/health
+- **API Documentation**: http://localhost:3001/api/search?query=cats&limit=50
 
-```bash
-# Using Python (if you have it)
-cd public
-python -m http.server 8000
+## 🔧 API Reference
 
-# Using Node.js http-server
-npx http-server public -p 8000
+### Main Search Endpoint
+
+```http
+GET /api/search?query={search_term}&limit={number}
 ```
 
-Frontend will be available at http://localhost:8000
+**Parameters:**
+- `query` (required): Search term (e.g., "nature", "technology")
+- `limit` (optional): Number of results (default: 100, max: 200)
 
-## 🔧 API Endpoints
-
-### Backend Endpoints
-
-- `GET /api/health` - Server health check
-- `GET /api/unsplash/search?query=nature&per_page=20` - Unsplash images
-- `GET /api/pixabay/search?query=nature&per_page=20` - Pixabay images  
-- `GET /api/pexels/search?query=nature&per_page=20` - Pexels images
-- `GET /api/wikimedia/search?query=nature&per_page=10` - Wikimedia images
-- `GET /api/search/all?query=nature&per_page=100` - Combined search
-
-### Example API Response
+**Example Response:**
 ```json
 {
-  "query": "nature",
-  "total": 50,
-  "stats": {
-    "freeImages": 45,
-    "sources": 4,
-    "bySource": {
-      "Unsplash": 18,
-      "Pixabay": 15,
-      "Pexels": 12,
-      "Wikimedia Commons": 5
-    }
-  },
   "results": [
     {
       "id": "unsplash_abc123",
+      "hashedId": "encrypted_viewer_id",
       "title": "Beautiful mountain landscape",
-      "url": "https://images.unsplash.com/photo-123/400x300",
+      "url": "/api/proxy-image?url=...",
       "downloadUrl": "https://images.unsplash.com/photo-123/original",
-      "source": "Unsplash",
+      "sourcePageUrl": "https://unsplash.com/photos/abc123",
+      "source": "Unsplash", 
+      "sources": ["Unsplash", "Google Images"],
+      "sourceCount": 2,
       "width": 4000,
       "height": 3000,
       "size": "2.5 MB",
       "copyright": {
         "status": "free",
-        "license": "Unsplash License",
-        "description": "Free to use for any purpose, including commercial use. No attribution required.",
+        "license": "Unsplash License", 
+        "description": "Free to use for any purpose",
         "canUseCommercially": true,
         "requiresAttribution": false
       },
       "photographer": "John Doe",
       "tags": ["nature", "mountain", "landscape"]
     }
-  ]
+  ],
+  "summary": {
+    "total": 89,
+    "sources": {
+      "Google Images": 25,
+      "Pexels": 18,
+      "Unsplash": 15,
+      "Pixabay": 12,
+      "Bing Images": 10,
+      "Wikimedia Commons": 6,
+      "DuckDuckGo Images": 3
+    },
+    "performance": {
+      "totalTime": "3247ms",
+      "averageTime": "1856ms",
+      "concurrentSources": 7
+    },
+    "deduplication": {
+      "beforeDedup": 156,
+      "afterDedup": 89,
+      "duplicatesRemoved": 67
+    }
+  }
 }
 ```
 
-## 📊 Copyright Information
+### Other Endpoints
 
-The app provides detailed copyright information for each image:
+- `GET /health` - Server health check and API key status
+- `GET /api/test/{source}?query={term}` - Test individual sources
+- `GET /api/download/{id}?url={image_url}` - Download proxy
+- `GET /view/{hashedId}` - Image viewer page
+- `GET /api/proxy-image?url={image_url}` - Image proxy for CORS
 
-### Copyright Statuses
-- **🟢 FREE USE**: Can be used for any purpose including commercial
-- **🟡 ATTRIBUTION**: Free to use but requires crediting the author
-- **🔴 RESTRICTED**: Limited usage rights, check individual license
-- **⚪ CHECK LICENSE**: Unknown status, verify before using
+## 🎨 Frontend Features
 
-### License Types
-- **Unsplash License**: Free for any use, no attribution required
-- **Pixabay License**: Free for commercial use, attribution appreciated
-- **Pexels License**: Free to use, attribution to photographer appreciated  
-- **Creative Commons**: Various CC licenses, attribution usually required
+### Search Interface
+- **Multi-source concurrent search** with real-time progress
+- **Advanced filtering system** with source, resolution, orientation, and usage rights filters
+- **Active filter management** with clear visual indicators
+- **Results statistics** showing total images, free images, and source breakdown
 
-## 🛡️ Security Features
+### Image Grid
+- **Responsive masonry layout** that adapts to screen size
+- **Lazy loading** for optimal performance
+- **Copyright status indicators** with color-coded badges
+- **Quick actions** for view, download, and source links
+- **Hover effects** with image details overlay
 
-- **Rate Limiting**: 100 requests per 15 minutes per IP
+### Image Viewer
+- **Full-screen image display** with proper aspect ratio handling
+- **Direct download functionality** with proper file naming
+- **Source page links** to original image locations
+- **Image metadata display** including dimensions and photographer info
+
+## 🛡️ Security & Performance
+
+### Security Features
+- **Rate Limiting**: 200 requests per 15 minutes per IP address
+- **Input Validation**: Query parameter sanitization and validation
 - **CORS Protection**: Configurable cross-origin policies
-- **Input Validation**: Query parameter sanitization
-- **Error Handling**: Graceful fallbacks for API failures
-- **Helmet.js**: Security headers and protections
+- **Security Headers**: Helmet.js integration for security headers
+- **URL Validation**: Comprehensive URL validation and cleanup
+- **Error Handling**: Graceful error handling without information leakage
 
-## 🚀 Deployment
+### Performance Optimizations
+- **Concurrent API Calls**: All sources searched simultaneously
+- **Connection Pooling**: HTTP agent with keep-alive connections
+- **Smart Retry Logic**: Exponential backoff for failed requests  
+- **Image Proxy Caching**: Efficient image serving with caching headers
+- **Memory Management**: Proper cleanup of browser instances and streams
+- **Request Deduplication**: Intelligent duplicate removal
 
-### Using Docker
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY . .
-EXPOSE 3001
-CMD ["npm", "start"]
-```
+## 📊 Search Algorithm
+
+### Multi-Phase Search Strategy
+1. **Concurrent Execution**: All 7 sources searched simultaneously
+2. **Equal Priority**: Each source gets equal allocation (e.g., ~14 images each for 100 total)
+3. **Results Combination**: All results merged into a single collection
+4. **Smart Deduplication**: Removes duplicates while preserving best quality
+5. **Source Tracking**: Tracks which sources provided each image
+6. **Final Shuffling**: Results shuffled to ensure fair source mixing
+
+### Deduplication Logic
+- **URL Normalization**: Standardizes URLs for comparison
+- **Similarity Detection**: Finds near-duplicate images using URL and title similarity
+- **Quality Preservation**: Keeps the highest quality version of duplicates
+- **Source Merging**: Tracks all sources that provided the same image
+- **Metadata Merging**: Combines copyright info, preferring free licenses
+
+## 🚀 Deployment Options
 
 ### Using Heroku
+
 ```bash
 # Install Heroku CLI and login
 heroku create your-image-search-app
+
+# Set environment variables
 heroku config:set UNSPLASH_ACCESS_KEY=your_key_here
-heroku config:set PIXABAY_KEY=your_key_here  
+heroku config:set PIXABAY_KEY=your_key_here
 heroku config:set PEXELS_KEY=your_key_here
+heroku config:set IMAGE_ENCRYPTION_KEY=your_secure_key_here
+
+# Add Puppeteer buildpack
+heroku buildpacks:add jontewks/puppeteer
+
+# Deploy
 git push heroku main
 ```
 
-### Using Vercel/Netlify
-Deploy the frontend as static files and backend as serverless functions.
+### Using Local Production Server
+
+For production deployment on your own server:
+
+```bash
+# Install PM2 for process management
+npm install -g pm2
+
+# Create PM2 ecosystem file
+cat > ecosystem.config.js << EOF
+module.exports = {
+  apps: [{
+    name: 'image-search-app',
+    script: 'index.js',
+    instances: 'max',
+    exec_mode: 'cluster',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 3001
+    },
+    env_production: {
+      NODE_ENV: 'production',
+      PORT: 3001
+    }
+  }]
+};
+EOF
+
+# Start with PM2
+pm2 start ecosystem.config.js --env production
+
+# Save PM2 configuration
+pm2 save
+pm2 startup
+```
+
+### Using Render
+
+1. Connect your GitHub repository to Render
+2. Create a new Web Service
+3. Set build command: `npm install`
+4. Set start command: `npm start`  
+5. Add environment variables in Render dashboard:
+   - `UNSPLASH_ACCESS_KEY`
+   - `PIXABAY_KEY`
+   - `PEXELS_KEY`
+   - `IMAGE_ENCRYPTION_KEY`
 
 ## 🔍 Troubleshooting
 
 ### Common Issues
 
-**"Backend API unavailable"**
-- Check if server is running on port 3001
-- Verify API keys are set correctly
-- Check console for detailed error messages
-
-**"No images found"**  
-- Try different search terms
-- Check if API keys are valid and not expired
-- Verify internet connection
-
-**CORS Errors**
-- Ensure backend server is running
-- Check if frontend is trying to access correct backend URL
-- Verify CORS is properly configured
-
-### Testing API Keys
+**"Module not found" errors**
 ```bash
-# Test Unsplash
-curl "http://localhost:3001/api/unsplash/search?query=test&per_page=5"
-
-# Test combined search  
-curl "http://localhost:3001/api/search/all?query=nature&per_page=10"
-
-# Health check
-curl "http://localhost:3001/api/health"
+# Reinstall dependencies
+rm -rf node_modules package-lock.json
+npm install
 ```
 
-## 📈 Performance Optimization
+**"Backend API unavailable"**
+- Verify server is running on port 3001
+- Check console for detailed error messages
+- Ensure all dependencies are installed
 
-- **Image Lazy Loading**: Images load as user scrolls
-- **Request Caching**: Backend can cache responses  
-- **Image Optimization**: Thumbnails for grid, full size for download
-- **Parallel API Calls**: Multiple sources fetched simultaneously
-- **Error Resilience**: Fallback sources if primary APIs fail
+**Puppeteer installation issues**
+```bash
+# On Linux/Ubuntu
+sudo apt-get install -y gconf-service libasound2 libatk1.0-0 libc6 libcairo2 libcups2
 
-## 🎨 Customization
+# On macOS (if using M1/M2 Mac)
+npm install puppeteer --platform=darwin --arch=arm64
 
-### Adding New Sources
-1. Add API integration in backend server
-2. Update frontend source list
-3. Add copyright information mapping
-4. Test thoroughly
+# Alternative: Use system Chrome
+export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+export PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
+```
 
-### UI Customization
-- Modify CSS variables for colors and spacing
-- Adjust grid layouts for different screen sizes  
-- Add new UI components as needed
-- Implement additional filters or sorting
+**"No images found" or low results**
+- Try different search terms
+- Check if API keys are valid and have remaining quota
+- Verify internet connection and firewall settings
+- Check server logs for specific error messages
 
-## 📝 License & Usage
+**Memory issues with large searches**
+```bash
+# Increase Node.js memory limit
+node --max-old-space-size=4096 index.js
+```
 
-This application is provided as-is for educational and personal use. When using images from the search results:
+### Testing Individual Sources
 
-1. **Always check the copyright information** provided with each image
-2. **Follow the license requirements** (attribution, commercial use restrictions, etc.)
-3. **Verify licensing** for critical commercial projects
-4. **Respect photographers' rights** and platform terms of service
+```bash
+# Test each source individually
+curl "http://localhost:3001/api/test/pexels?query=cats&limit=5"
+curl "http://localhost:3001/api/test/google?query=dogs&limit=10"
+curl "http://localhost:3001/api/test/wikimedia?query=nature&limit=8"
+
+# Check overall health
+curl "http://localhost:3001/health"
+```
+
+### Performance Monitoring
+
+The application provides detailed performance metrics:
+- **Search timing** for each source
+- **Success/failure rates** per source
+- **Deduplication statistics**
+- **Memory usage** (in development mode)
+- **Rate limiting status**
+
+## 📝 Copyright & Usage Guidelines
+
+### Using Search Results
+
+**Always follow these guidelines:**
+
+1. **Check Copyright Status**: Each image shows a copyright status badge
+   - 🟢 **FREE USE**: Can be used for any purpose including commercial
+   - 🟡 **ATTRIBUTION**: Free to use but requires crediting the author  
+   - 🔴 **RESTRICTED**: Limited usage rights, check individual license
+   - ⚪ **CHECK LICENSE**: Unknown status, verify before using
+
+2. **Read License Requirements**: Click "Go to Website" to see full licensing terms
+
+3. **Respect Attribution Requirements**: When required, credit the photographer and source
+
+4. **Commercial Use**: Verify commercial usage rights for business applications
+
+5. **Bulk Usage**: For large-scale usage, consider contacting the source platform
+
+### License Types Explained
+
+- **Unsplash License**: Free for any use, no attribution required
+- **Pixabay License**: Free for commercial use, attribution appreciated but not required
+- **Pexels License**: Free to use, attribution to photographer appreciated
+- **Creative Commons (Wikimedia)**: Various CC licenses, usually requires attribution
+- **Various (Scraped Sources)**: Copyright varies by individual image, always verify
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
+### Development Setup
 
-## 📞 Support
+```bash
+# Fork the repository and clone
+git clone https://github.com/yourusername/image-search-app.git
+cd image-search-app
 
-For issues and questions:
-- Check the troubleshooting section
-- Review API documentation for each service
-- Test with minimal examples
-- Check browser console for errors
+# Install dependencies
+npm install
+
+# Create environment file
+cp .env.example .env
+# Edit .env with your API keys
+
+# Start in development mode
+npm run dev
+```
+
+### Adding New Sources
+
+1. **Create search function** in `index.js`
+2. **Add to source list** in the concurrent search function
+3. **Update frontend filters** in `public/index.html` and JavaScript
+4. **Add test endpoint** support
+5. **Update documentation**
+
+### Code Style Guidelines
+
+- Use **ES6+ features** where appropriate
+- **Comprehensive error handling** for all async operations
+- **Detailed logging** with structured log messages
+- **Input validation** for all user inputs
+- **Security best practices** for all external requests
+
+## 📞 Support & Resources
+
+### Getting Help
+
+1. **Check the troubleshooting section** above
+2. **Review server logs** for detailed error messages
+3. **Test individual API endpoints** using curl or Postman
+4. **Check browser console** for frontend errors
+5. **Verify API key validity** using provider documentation
+
+### Useful Resources
+
+- **Unsplash API Docs**: https://unsplash.com/documentation
+- **Pixabay API Docs**: https://pixabay.com/api/docs/
+- **Pexels API Docs**: https://www.pexels.com/api/documentation/
+- **Puppeteer Documentation**: https://pptr.dev/
+- **Express.js Documentation**: https://expressjs.com/
+
+### Performance Tuning
+
+For high-traffic deployments:
+- **Implement Redis caching** for API responses
+- **Use CDN** for static assets
+- **Add load balancing** for multiple instances
+- **Monitor memory usage** and adjust limits
+- **Implement request queuing** for rate limit management
 
 ---
 
 **Happy Searching! 🔍📸**
+
+*This application aggregates images from multiple sources with respect for copyright and attribution requirements. Always verify usage rights before using images in commercial applications.*
