@@ -36,7 +36,7 @@ image-search-app/
 
 #### Install Dependencies
 ```bash
-npm install express cors axios express-rate-limit helmet
+npm install express cors axios express-rate-limit helmet puppeteer dotenv
 npm install -D nodemon
 ```
 

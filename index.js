@@ -448,377 +448,372 @@ const waitForTimeout = async (page, ms) => {
     }
 };
 
-// Enhanced Google Images scraper with better anti-detection
+// Fixed Google Images scraper with improved image URL extraction
 const searchGoogleImages = async (query, limit = 80) => {
     let browser;
     try {
-        log.info(`Searching Google Images for: ${query} (limit: ${limit})`);
+        log.info(`🔍 Starting Google Images search: "${query}" (limit: ${limit})`);
         const images = [];
 
-        // Enhanced browser launch with better stealth
         browser = await puppeteer.launch({
-            headless: 'new', // Use new headless mode
+            headless: 'new',
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                '--disable-blink-features=AutomationControlled', // Hide automation
-                '--disable-features=VizDisplayCompositor',
+                '--disable-blink-features=AutomationControlled',
                 '--disable-web-security',
-                '--disable-features=site-per-process',
-                '--flag-switches-begin --disable-site-isolation-trials --flag-switches-end',
-                '--disable-extensions',
                 '--no-first-run',
-                '--disable-default-apps',
-                '--disable-background-timer-throttling',
-                '--disable-renderer-backgrounding',
-                '--disable-backgrounding-occluded-windows',
-                '--window-size=1366,768'
-            ],
-            defaultViewport: null
+                '--window-size=1920,1080'
+            ]
         });
 
         const page = await browser.newPage();
+        await page.setViewport({ width: 1920, height: 1080 });
 
-        // Enhanced stealth measures
+        // Basic stealth
         await page.evaluateOnNewDocument(() => {
-            // Remove webdriver property
-            delete navigator.__proto__.webdriver;
-            
-            // Mock plugins
-            Object.defineProperty(navigator, 'plugins', {
-                get: () => [1, 2, 3, 4, 5].map(() => ({ description: 'test', filename: 'test.so', name: 'test' })),
-            });
-            
-            // Mock languages
-            Object.defineProperty(navigator, 'languages', {
-                get: () => ['en-US', 'en'],
-            });
-            
-            // Override permissions
-            const originalQuery = window.navigator.permissions.query;
-            window.navigator.permissions.query = (parameters) => (
-                parameters.name === 'notifications' ?
-                    Promise.resolve({ state: Cypress.denied }) :
-                    originalQuery(parameters)
-            );
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
         });
 
-        // Set realistic viewport and enhanced headers
-        await page.setViewport({ width: 1366, height: 768 });
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch&hl=en&safe=off`;
         
-        await page.setExtraHTTPHeaders({
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'DNT': '1',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-            'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
-            'Cache-Control': 'max-age=0'
-        });
+        log.info(`🌐 Loading: ${searchUrl}`);
+        await page.goto(searchUrl, { waitUntil: 'networkidle0', timeout: 20000 });
 
-        // Try multiple search approaches
-        const searchUrls = [
-            `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch&hl=en&safe=off&tbs=sur:f`,
-            `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch&hl=en&safe=off`,
-            `https://images.google.com/search?q=${encodeURIComponent(query)}&safe=off&hl=en`
-        ];
+        // Enhanced block detection
+        const pageContent = await page.content();
+        if (pageContent.toLowerCase().includes('unusual traffic') || 
+            pageContent.toLowerCase().includes('captcha') ||
+            pageContent.toLowerCase().includes('blocked')) {
+            throw new Error('Google blocked the request');
+        }
 
-        for (const searchUrl of searchUrls) {
-            try {
-                log.info(`Attempting Google search with URL: ${searchUrl}`);
-                
-                // Navigate with longer timeout
-                await page.goto(searchUrl, { 
-                    waitUntil: 'domcontentloaded', 
-                    timeout: 45000 
-                });
+        // Handle cookies
+        try {
+            await page.waitForSelector('button[id*="accept"], .VfPpkd-LgbsSe, [aria-label*="Accept"]', { timeout: 3000 });
+            const cookieButton = await page.$('button[id*="accept"], .VfPpkd-LgbsSe, [aria-label*="Accept"]');
+            if (cookieButton) {
+                await cookieButton.click();
+                await waitForTimeout(page, 1000);
+                log.info(`🍪 Accepted cookies`);
+            }
+        } catch (e) {
+            log.info(`🍪 No cookie banner found`);
+        }
 
-                // Check if we hit a CAPTCHA or block page
-                const pageTitle = await page.title();
-                const pageContent = await page.content();
-                
-                log.info(`Page title: ${pageTitle}`);
-                
-                if (pageTitle.includes('unusual traffic') || 
-                    pageContent.includes('captcha') || 
-                    pageContent.includes('blocked') ||
-                    pageContent.includes('unusual traffic from your computer')) {
-                    log.warn('Google CAPTCHA or block page detected, trying next URL...');
-                    continue;
-                }
+        // Wait for image grid to load
+        await page.waitForSelector('div[jsname="dTDiAc"], .isv-r, img[src*="gstatic"]', { timeout: 15000 });
+        log.info(`✅ Image grid loaded`);
 
-                // Add human-like delays
-                await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
-
-                // Check for cookie consent and handle it
+        // Scroll to load more images
+        log.info(`📜 Loading more images...`);
+        for (let scroll = 0; scroll < 4; scroll++) {
+            await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+            await waitForTimeout(page, 800);
+            
+            // Try show more button
+            if (scroll === 2) {
                 try {
-                    const cookieButton = await page.$('button[id*="accept"], button[id*="agree"], .VfPpkd-LgbsSe[role="button"]');
-                    if (cookieButton) {
-                        await cookieButton.click();
-                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    const showMoreSelectors = [
+                        'input[value*="Show more"]',
+                        '.mye4qd',
+                        '.YstHxe input',
+                        'input[type="button"][value*="more"]'
+                    ];
+                    
+                    for (const selector of showMoreSelectors) {
+                        const button = await page.$(selector);
+                        if (button) {
+                            const isVisible = await button.isIntersectingViewport();
+                            if (isVisible) {
+                                log.info(`🔄 Clicking show more: ${selector}`);
+                                await button.click();
+                                await waitForTimeout(page, 2000);
+                                break;
+                            }
+                        }
                     }
-                } catch (e) {
-                    // Cookie button not found, continue
-                }
+                } catch (e) {}
+            }
+        }
 
-                // Wait for images with multiple selectors
-                let imagesFound = false;
-                const imageSelectors = ['img[src*="http"]', 'img', '[role="img"]', '.rg_i'];
+        // Get containers with better selector strategy
+        const containers = await page.$$('div[jsname="dTDiAc"], .isv-r');
+        const targetCount = Math.min(containers.length, limit);
+        
+        log.info(`🎯 Found ${containers.length} clickable containers, processing ${targetCount}`);
+
+        if (containers.length === 0) {
+            throw new Error('No image containers found on page');
+        }
+
+        // Process each container with improved click handling
+        let successCount = 0;
+        
+        for (let i = 0; i < targetCount; i++) {
+            try {
+                log.info(`🖱️ Processing image ${i + 1}/${targetCount}`);
+
+                const container = containers[i];
                 
-                for (const selector of imageSelectors) {
+                // Scroll container into view
+                await container.evaluate(el => el.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+                await waitForTimeout(page, 200);
+
+                // Click the container
+                await container.click();
+                await waitForTimeout(page, 1000);
+
+                // Wait for the sidebar/modal to load with multiple possible selectors
+                let sidebarFound = false;
+                const sidebarSelectors = [
+                    'div[data-vab] img[src*="http"]',  // New Google Images interface
+                    '.YsLeY img[src*="http"]',         // Main sidebar container
+                    '.c7cjWc img[src*="http"]',        // Alternative container
+                    'img[jsname="kn3ccd"]',            // Main image element
+                    '.sFlh5c.FyHeAf.iPVvYb',          // Image container
+                    '.r48jcc.pT0Scc img',             // Another possible selector
+                    'div[role="dialog"] img[src*="http"]' // Modal dialog images
+                ];
+
+                // Try each selector
+                for (const selector of sidebarSelectors) {
                     try {
-                        await page.waitForSelector(selector, { timeout: 10000 });
-                        imagesFound = true;
+                        await page.waitForSelector(selector, { timeout: 1500 });
+                        sidebarFound = true;
+                        log.info(`✅ Found sidebar with selector: ${selector}`);
                         break;
                     } catch (e) {
-                        log.info(`Selector ${selector} not found, trying next...`);
+                        continue;
                     }
                 }
 
-                if (!imagesFound) {
-                    log.warn('No image selectors found, trying next URL...');
+                if (!sidebarFound) {
+                    log.warn(`❌ Skip ${i + 1}: No sidebar found after click`);
                     continue;
                 }
 
-                // Current structure debug
-                const debugInfo = await page.evaluate(() => {
-                    return {
-                        totalImages: document.querySelectorAll('img').length,
-                        httpImages: document.querySelectorAll('img[src*="http"]').length,
-                        imgresLinks: document.querySelectorAll('a[href*="imgres"]').length,
-                        containers: {
-                            'div[jsname="dTDiAc"]': document.querySelectorAll('div[jsname="dTDiAc"]').length,
-                            'div[jscontroller="Um3BXb"]': document.querySelectorAll('div[jscontroller="Um3BXb"]').length,
-                            'a[href*="imgres"]': document.querySelectorAll('a[href*="imgres"]').length,
-                            'g-img': document.querySelectorAll('g-img').length,
-                            '.F0uyec': document.querySelectorAll('.F0uyec').length,
-                            '.eA0Zlc': document.querySelectorAll('.eA0Zlc').length
-                        }
-                    };
-                });
-
-                log.info(`Current structure debug: ${JSON.stringify(debugInfo, null, 2)}`);
-
-                // Additional enhanced debug information
-                const enhancedDebugInfo = await page.evaluate(() => {
-                    const allImages = document.querySelectorAll('img');
-                    const httpImages = document.querySelectorAll('img[src*="http"]');
-                    
-                    return {
-                        pageUrl: window.location.href,
-                        pageTitle: document.title,
-                        hasImagesContainer: document.querySelector('[data-ved]') !== null,
-                        hasSearchResults: document.querySelector('#search') !== null,
-                        additionalContainers: {
-                            '[data-ved]': document.querySelectorAll('[data-ved]').length,
-                            '.isv-r': document.querySelectorAll('.isv-r').length,
-                            '.rg_bx': document.querySelectorAll('.rg_bx').length,
-                            '.rg_i': document.querySelectorAll('.rg_i').length
-                        },
-                        sampleImageSrcs: Array.from(httpImages).slice(0, 5).map(img => img.src.substring(0, 100)),
-                        pageTextSnippet: document.body.innerText.substring(0, 200)
-                    };
-                });
-
-                log.info(`Enhanced debug info: ${JSON.stringify(enhancedDebugInfo, null, 2)}`);
-
-                if (debugInfo.totalImages === 0) {
-                    log.warn('No images found on page, trying next URL...');
-                    continue;
-                }
-
-                // More aggressive scrolling
-                for (let i = 0; i < 8; i++) {
-                    await page.evaluate(() => {
-                        window.scrollTo(0, document.body.scrollHeight);
-                    });
-                    await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
-
-                    // Try clicking "Show more results" buttons
-                    try {
-                        const showMoreButtons = await page.$$('input[value*="Show more"], input[value*="more results"], .mye4qd, .YstHxe, .LZ4I');
-                        for (const button of showMoreButtons) {
-                            try {
-                                await button.click();
-                                await new Promise(resolve => setTimeout(resolve, 2000));
-                            } catch (e) {
-                                // Button not clickable
-                            }
-                        }
-                    } catch (e) {
-                        // No buttons found
-                    }
-                }
-
-                // Enhanced image extraction with multiple fallback methods
-                const imageData = await page.evaluate((limit) => {
-                    const results = [];
-                    const seenUrls = new Set();
-
-                    console.log('Starting enhanced Google image extraction...');
-
-                    // Method 1: Modern Google structure with imgres links
-                    const imgresLinks = document.querySelectorAll('a[href*="/imgres"]');
-                    console.log(`Method 1: Found ${imgresLinks.length} imgres links`);
-
-                    imgresLinks.forEach((link, index) => {
-                        if (results.length >= limit) return;
-
-                        try {
-                            const href = link.href;
-                            const urlMatch = href.match(/imgurl=([^&]+)/);
-                            const pageUrlMatch = href.match(/imgrefurl=([^&]+)/);
-
-                            if (urlMatch) {
-                                const imageUrl = decodeURIComponent(urlMatch[1]);
-                                const sourcePageUrl = pageUrlMatch ? decodeURIComponent(pageUrlMatch[1]) : imageUrl;
-
-                                if (!seenUrls.has(imageUrl) && imageUrl.startsWith('http') && 
-                                    !imageUrl.includes('data:image') && imageUrl.length > 20) {
-                                    
-                                    seenUrls.add(imageUrl);
-                                    
-                                    const img = link.querySelector('img');
-                                    const title = img ? (img.alt || img.title || `Google Image ${results.length + 1}`) : `Google Image ${results.length + 1}`;
-
-                                    results.push({
-                                        url: imageUrl,
-                                        sourcePageUrl: sourcePageUrl,
-                                        title: title,
-                                        width: 800,
-                                        height: 600,
-                                        source: 'google_imgres_enhanced'
-                                    });
-                                }
-                            }
-                        } catch (e) {
-                            console.log('Error processing imgres link:', e);
-                        }
-                    });
-
-                    // Method 2: Direct image extraction from containers
-                    if (results.length < limit / 2) {
-                        console.log('Method 2: Extracting from image containers...');
+                // FIXED: Extract image data with improved URL extraction
+                const imageData = await page.evaluate(() => {
+                    // Function to check if URL is a high-quality image URL
+                    const isHighQualityUrl = (url) => {
+                        if (!url || !url.startsWith('http')) return false;
                         
-                        const containers = document.querySelectorAll('[data-ved], .isv-r, .rg_bx');
-                        console.log(`Found ${containers.length} image containers`);
-
-                        containers.forEach((container, index) => {
-                            if (results.length >= limit) return;
-
-                            const images = container.querySelectorAll('img[src*="http"]');
-                            images.forEach(img => {
-                                if (results.length >= limit) return;
-
-                                const src = img.src;
-                                if (src && !seenUrls.has(src) && src.length > 20 && 
-                                    !src.includes('data:image') && !src.includes('logo')) {
-                                    
-                                    seenUrls.add(src);
-                                    results.push({
-                                        url: src,
-                                        sourcePageUrl: src,
-                                        title: img.alt || img.title || `Container Image ${results.length + 1}`,
-                                        width: img.naturalWidth || 800,
-                                        height: img.naturalHeight || 600,
-                                        source: 'google_container_enhanced'
-                                    });
-                                }
-                            });
-                        });
-                    }
-
-                    // Method 3: All high-quality images as final fallback
-                    if (results.length === 0) {
-                        console.log('Method 3: Fallback to all quality images...');
+                        // Avoid thumbnail and low-quality URLs
+                        const lowQualityPatterns = [
+                            'encrypted-tbn',
+                            'gstatic.com/images?q=tbn',
+                            'fonts.gstatic.com',
+                            'ssl.gstatic.com/ui'
+                        ];
                         
-                        const allImages = document.querySelectorAll('img[src*="http"]');
-                        const qualityImages = Array.from(allImages).filter(img => {
-                            const src = img.src;
-                            const width = img.naturalWidth || img.width || 0;
-                            const height = img.naturalHeight || img.height || 0;
+                        return !lowQualityPatterns.some(pattern => url.includes(pattern));
+                    };
+
+                    let imageUrl = null;
+                    let sourceUrl = null;
+                    let title = '';
+                    let width = 800;
+                    let height = 600;
+
+                    // Priority order for finding the best image URL
+                    const imageSelectors = [
+                        // High priority - direct high quality images in the new interface
+                        'div[data-vab] img[src*="http"]',
+                        '.YsLeY img[src*="http"]',
+                        '.c7cjWc img[src*="http"]',
+                        'img[jsname="kn3ccd"][src*="http"]',
+                        '.sFlh5c.FyHeAf.iPVvYb[src*="http"]',
+                        '.r48jcc.pT0Scc img[src*="http"]',
+                        'div[role="dialog"] img[src*="http"]',
+                        // Fallback - any large image in the sidebar area
+                        'div[jsaction*="click"] img[src*="http"]',
+                        'img[src*="http"]'
+                    ];
+
+                    // Find the highest quality image available
+                    for (const selector of imageSelectors) {
+                        const imgs = document.querySelectorAll(selector);
+                        
+                        for (const img of imgs) {
+                            if (!img.src || !img.src.startsWith('http')) continue;
                             
-                            return src && src.length > 30 && width >= 150 && height >= 150 &&
-                                   !src.includes('logo') && !src.includes('data:image') && 
-                                   !src.includes('static') && !src.includes('icon');
-                        });
-
-                        qualityImages.slice(0, limit).forEach(img => {
-                            const src = img.src;
-                            if (!seenUrls.has(src)) {
-                                seenUrls.add(src);
-                                results.push({
-                                    url: src,
-                                    sourcePageUrl: src,
-                                    title: img.alt || img.title || `Quality Image ${results.length + 1}`,
-                                    width: img.naturalWidth || img.width || 800,
-                                    height: img.naturalHeight || img.height || 600,
-                                    source: 'google_quality_fallback'
-                                });
+                            // Check if this is a high-quality URL
+                            if (isHighQualityUrl(img.src)) {
+                                // Prefer larger images
+                                const imgWidth = img.naturalWidth || img.width || 0;
+                                const imgHeight = img.naturalHeight || img.height || 0;
+                                
+                                if (imgWidth >= 200 && imgHeight >= 200) {
+                                    imageUrl = img.src;
+                                    width = imgWidth;
+                                    height = imgHeight;
+                                    title = img.alt || img.title || '';
+                                    
+                                    console.log(`Found high-quality image: ${imageUrl.substring(0, 60)}... (${width}x${height})`);
+                                    break;
+                                }
                             }
-                        });
+                        }
+                        
+                        if (imageUrl) break; // Found good URL, stop looking
                     }
 
-                    console.log(`Total Google results extracted: ${results.length}`);
-                    return results;
-                }, limit);
+                    // If no high-quality URL found, use any available URL as fallback
+                    if (!imageUrl) {
+                        const allImgs = document.querySelectorAll('img[src*="http"]');
+                        for (const img of allImgs) {
+                            if (img.src && img.src.startsWith('http') && img.src.length > 50) {
+                                const imgWidth = img.naturalWidth || img.width || 0;
+                                const imgHeight = img.naturalHeight || img.height || 0;
+                                
+                                if (imgWidth >= 150 && imgHeight >= 150) {
+                                    imageUrl = img.src;
+                                    width = imgWidth;
+                                    height = imgHeight;
+                                    title = img.alt || img.title || '';
+                                    
+                                    console.log(`Fallback image found: ${imageUrl.substring(0, 60)}... (${width}x${height})`);
+                                    break;
+                                }
+                            }
+                        }
+                    }
 
-                if (imageData.length > 0) {
-                    log.info(`Successfully extracted ${imageData.length} image URLs from Google`);
-                    
-                    // Process the extracted data
-                    imageData.forEach((item, index) => {
-                        const imageId = `google_${item.source}_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`;
-                        images.push({
-                            id: imageId,
-                            title: `${item.title} - ${query}`,
-                            url: `/api/proxy-image?url=${encodeURIComponent(item.url)}`,
-                            downloadUrl: item.url,
-                            sourcePageUrl: item.sourcePageUrl || item.url,
-                            source: 'Google Images',
-                            width: item.width || 800,
-                            height: item.height || 600,
-                            size: estimateFileSize(item.width || 800, item.height || 600),
-                            copyright: {
-                                status: 'unknown',
-                                license: 'Various',
-                                description: 'Copyright varies. Check source.',
-                                canUseCommercially: false,
-                                requiresAttribution: true
-                            },
-                            photographer: 'Various',
-                            tags: [query]
-                        });
+                    // Find source page URL
+                    const sourceSelectors = [
+                        'a[href*="http"]:not([href*="google.com"]):not([href*="javascript"])',
+                        '.YsLeY[href*="http"]',
+                        'a[data-ved][href*="http"]:not([href*="google.com"])',
+                        'div[data-vab] a[href*="http"]:not([href*="google.com"])'
+                    ];
+
+                    for (const selector of sourceSelectors) {
+                        const link = document.querySelector(selector);
+                        if (link && link.href && !link.href.includes('google.com') && !link.href.includes('javascript:')) {
+                            sourceUrl = link.href;
+                            break;
+                        }
+                    }
+
+                    // Get title from various sources
+                    if (!title) {
+                        const titleSelectors = [
+                            'h1',
+                            '.Hnk30e',
+                            '.tE7R7',
+                            '.MMgsKf',
+                            'div[data-vab] div[role="button"]',
+                            '[data-attrid="title"] h3'
+                        ];
+
+                        for (const selector of titleSelectors) {
+                            const titleEl = document.querySelector(selector);
+                            if (titleEl && titleEl.textContent && titleEl.textContent.trim()) {
+                                title = titleEl.textContent.trim();
+                                break;
+                            }
+                        }
+                    }
+
+                    console.log(`Final extraction result:`, {
+                        hasImageUrl: !!imageUrl,
+                        imageUrlPreview: imageUrl ? imageUrl.substring(0, 80) + '...' : 'null',
+                        sourceUrl: sourceUrl || 'Not found',
+                        title: title || 'No title',
+                        dimensions: `${width}x${height}`,
+                        isHighQuality: imageUrl ? isHighQualityUrl(imageUrl) : false
                     });
-                    
-                    break; // Success, exit URL loop
+
+                    return imageUrl ? {
+                        imageUrl,
+                        sourceUrl: sourceUrl || imageUrl,
+                        title: title || 'Google Image',
+                        width,
+                        height,
+                        isHighQuality: isHighQualityUrl(imageUrl)
+                    } : null;
+                });
+
+                if (imageData && imageData.imageUrl) {
+                    const imageId = `google_fixed_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 6)}`;
+
+                    images.push({
+                        id: imageId,
+                        title: `${imageData.title} - ${query}`,
+                        url: `/api/proxy-image?url=${encodeURIComponent(imageData.imageUrl)}`,
+                        downloadUrl: imageData.imageUrl,
+                        sourcePageUrl: imageData.sourceUrl,
+                        source: 'Google Images',
+                        width: imageData.width,
+                        height: imageData.height,
+                        size: estimateFileSize(imageData.width, imageData.height),
+                        copyright: {
+                            status: 'unknown',
+                            license: 'Various',
+                            description: 'Copyright varies. Check source.',
+                            canUseCommercially: false,
+                            requiresAttribution: true
+                        },
+                        photographer: 'Various',
+                        tags: [query],
+                        extractionMethod: 'fixed_sidebar_click',
+                        debugInfo: {
+                            isHighQuality: imageData.isHighQuality,
+                            originalUrl: imageData.imageUrl,
+                            hasSourcePage: imageData.imageUrl !== imageData.sourceUrl,
+                            processingIndex: i,
+                            urlLength: imageData.imageUrl.length
+                        }
+                    });
+
+                    successCount++;
+                    log.info(`✅ Success ${successCount}: ${imageData.isHighQuality ? 'HQ' : 'Standard'} - ${imageData.title.substring(0, 40)}... - URL: ${imageData.imageUrl.substring(0, 60)}...`);
+
                 } else {
-                    log.warn(`No images extracted from ${searchUrl}, trying next...`);
+                    log.warn(`❌ No valid image data extracted for ${i + 1}`);
                 }
 
-            } catch (navigationError) {
-                log.error(`Navigation failed for ${searchUrl}:`, navigationError.message);
+                // Small delay between processing
+                await waitForTimeout(page, 300);
+
+                // Stop if we've reached limit
+                if (images.length >= limit) {
+                    log.info(`🎯 Reached target limit of ${limit} images`);
+                    break;
+                }
+
+            } catch (error) {
+                log.warn(`⚠️ Error processing image ${i + 1}: ${error.message}`);
                 continue;
             }
         }
 
-        log.info(`Google Images search completed: ${images.length} results`);
+        const highQualityCount = images.filter(img => img.debugInfo?.isHighQuality).length;
+        const standardCount = images.length - highQualityCount;
+
+        log.info(`🏆 Google Images extraction completed:`);
+        log.info(`   📊 Total: ${images.length}/${targetCount} (${((images.length/targetCount)*100).toFixed(1)}% success)`);
+        log.info(`   ✨ High quality URLs: ${highQualityCount}`);
+        log.info(`   📷 Standard URLs: ${standardCount}`);
+
         return images.slice(0, limit);
 
     } catch (error) {
-        log.error('Google Images search error:', error);
+        log.error('🚨 Google Images search error:', {
+            message: error.message,
+            query,
+            limit
+        });
         return [];
     } finally {
         if (browser) {
-            await browser.close();
+            try {
+                await browser.close();
+            } catch (e) {}
         }
     }
 };
@@ -1419,26 +1414,26 @@ const normalizeUrlForComparison = (url) => {
 // Helper function to calculate similarity between strings
 const calculateStringSimilarity = (str1, str2) => {
     if (!str1 || !str2) return 0;
-    
+
     const s1 = str1.toLowerCase();
     const s2 = str2.toLowerCase();
-    
+
     if (s1 === s2) return 1;
-    
+
     const len1 = s1.length;
     const len2 = s2.length;
     const maxLen = Math.max(len1, len2);
-    
+
     if (maxLen === 0) return 1;
-    
+
     // Simple similarity check for performance
     let matches = 0;
     const minLen = Math.min(len1, len2);
-    
+
     for (let i = 0; i < minLen; i++) {
         if (s1[i] === s2[i]) matches++;
     }
-    
+
     return matches / maxLen;
 };
 
@@ -1521,55 +1516,70 @@ const combineSearchResults = (searchResults) => {
 // Enhanced deduplication function with fixed logic
 const deduplicateWithSourceMerging = (allResults) => {
     log.info('Starting deduplication with source merging...');
-    
+
     const mergedResults = new Map();
     const urlToKeyMap = new Map(); // Maps normalized URLs to their Map keys
-    
+
     // Process ALL results and merge duplicates
     for (const result of allResults) {
         const originalUrl = result.downloadUrl;
         const normalizedUrl = normalizeUrlForComparison(originalUrl);
         const normalizedTitle = result.title?.toLowerCase().trim().substring(0, 100) || '';
-        
+
         // Skip if URL is invalid
         if (!normalizedUrl || normalizedUrl.length < 5) {
             log.debug(`Skipping invalid URL: ${originalUrl}`);
             continue;
         }
-        
+
+        if (result.source == 'Google Images') {
+            log.info(`Processing Google Images result: originalUrl = ${originalUrl}, title = ${result.title}, normalizedUrl = ${normalizedUrl}`);
+        }
+
         let foundDuplicate = false;
         let existingMapKey = null;
-        
+
         // Check for exact URL matches first (fastest and most reliable)
         if (urlToKeyMap.has(normalizedUrl)) {
             foundDuplicate = true;
             existingMapKey = urlToKeyMap.get(normalizedUrl);
+            if (result.source == 'Google Images') {
+                log.info(`URL duplicate for Google Image, title: ${result.title}`);
+            }
             log.debug(`Found exact URL duplicate: ${normalizedUrl.substring(0, 50)}...`);
         } else {
             // Check for similar URLs and titles - ONLY for very high similarity
             for (const [existingNormalizedUrl, existingMapKey_] of urlToKeyMap) {
                 if (foundDuplicate) break;
-                
+
                 const existingResult = mergedResults.get(existingMapKey_);
                 if (!existingResult) continue;
-                
+
                 // Only check URL similarity if URLs are very similar (high threshold)
                 const urlSimilarity = calculateStringSimilarity(normalizedUrl, existingNormalizedUrl);
                 if (urlSimilarity > 0.95) {
                     foundDuplicate = true;
                     existingMapKey = existingMapKey_;
+
+                    if (result.source == 'Google Images') {
+                        log.info(`URL similarity for Google Image, title: ${result.title}`);
+                    }
                     log.debug(`Found URL similarity duplicate: ${urlSimilarity.toFixed(3)} similarity`);
                     break;
                 }
-                
+
                 // Check title similarity ONLY for same source with very high similarity
-                if (result.source === existingResult.originalSource && 
-                    normalizedTitle && existingResult.title && 
+                if (result.source === existingResult.originalSource &&
+                    normalizedTitle && existingResult.title &&
                     normalizedTitle.length > 15 && existingResult.title.length > 15) {
-                    
+
                     const existingNormalizedTitle = existingResult.title.toLowerCase().trim().substring(0, 100);
                     const titleSimilarity = calculateStringSimilarity(normalizedTitle, existingNormalizedTitle);
-                    if (titleSimilarity > 0.92) {
+                    if (titleSimilarity > 0.95) {
+                        if (result.source == 'Google Images') {
+                            log.info(`Title similarity for Google Image, title: "${result.title}" ~ "${existingResult.title}" (${titleSimilarity.toFixed(3)})`);
+                        }
+
                         foundDuplicate = true;
                         existingMapKey = existingMapKey_;
                         log.debug(`Found title similarity duplicate: ${titleSimilarity.toFixed(3)} similarity`);
@@ -1578,25 +1588,25 @@ const deduplicateWithSourceMerging = (allResults) => {
                 }
             }
         }
-        
+
         if (foundDuplicate && existingMapKey) {
             // Verify the existing result actually exists
             const existingResult = mergedResults.get(existingMapKey);
-            
+
             if (existingResult) {
                 // SUCCESSFUL MERGE - Add source if not already present
                 if (!existingResult.sources.includes(result.source)) {
                     existingResult.sources.push(result.source);
                     existingResult.sourceCount = existingResult.sources.length;
-                    
+
                     // Update title to reflect multiple sources
                     existingResult.title = `${existingResult.originalTitle} (${existingResult.sources.join(', ')})`;
-                    
+
                     // Keep the best quality image URL
                     const currentSize = existingResult.width * existingResult.height;
                     const newSize = result.width * result.height;
-                    
-                    if (newSize > currentSize || 
+
+                    if (newSize > currentSize ||
                         (result.source.includes('Pexels') || result.source.includes('Unsplash') || result.source.includes('Pixabay'))) {
                         existingResult.downloadUrl = originalUrl;
                         existingResult.url = result.url;
@@ -1604,17 +1614,17 @@ const deduplicateWithSourceMerging = (allResults) => {
                         existingResult.height = result.height;
                         existingResult.size = result.size;
                     }
-                    
+
                     // Merge copyright info (prefer free licenses)
                     if (result.copyright.status === 'free' && existingResult.copyright.status !== 'free') {
                         existingResult.copyright = result.copyright;
                     }
-                    
+
                     // Update photographer info
                     if (result.photographer && result.photographer !== 'Various' && existingResult.photographer === 'Various') {
                         existingResult.photographer = result.photographer;
                     }
-                    
+
                     log.debug(`✓ MERGED: ${result.source} into existing result. New sources: [${existingResult.sources.join(', ')}]`);
                 } else {
                     log.debug(`⚠ Duplicate from same source ${result.source} - skipping`);
@@ -1624,14 +1634,14 @@ const deduplicateWithSourceMerging = (allResults) => {
                 foundDuplicate = false;
             }
         }
-        
+
         if (!foundDuplicate) {
             // Add as new result
             const newMapKey = `${result.source}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            
+
             // Map the normalized URL to this key
             urlToKeyMap.set(normalizedUrl, newMapKey);
-            
+
             // Create enhanced result with source tracking
             const enhancedResult = {
                 ...result,
@@ -1640,14 +1650,14 @@ const deduplicateWithSourceMerging = (allResults) => {
                 sourceCount: 1,
                 originalSource: result.source
             };
-            
+
             mergedResults.set(newMapKey, enhancedResult);
             log.debug(`✓ ADDED: New result from ${result.source} (${normalizedUrl.substring(0, 40)}...)`);
         }
     }
 
     const uniqueResults = Array.from(mergedResults.values());
-    
+
     // Log detailed statistics
     const sourceCount = {};
     uniqueResults.forEach(result => {
@@ -1655,11 +1665,11 @@ const deduplicateWithSourceMerging = (allResults) => {
             sourceCount[source] = (sourceCount[source] || 0) + 1;
         });
     });
-    
+
     log.info(`Deduplication completed. ${allResults.length} -> ${uniqueResults.length} unique results`);
     log.info('Final source distribution:', sourceCount);
     log.info(`Multi-source images: ${uniqueResults.filter(r => r.sourceCount > 1).length}`);
-    
+
     return uniqueResults;
 };
 
@@ -1735,16 +1745,16 @@ app.get('/api/search', async (req, res) => {
 
         // Execute multi-source search
         const { searchResults, perSourceLimit, totalSources } = await executeMultiSourceSearch(query, limit);
-        
+
         // Combine all results
         const { allResults, sourceStats, performanceStats } = combineSearchResults(searchResults);
-        
+
         // Deduplicate with source merging
         const uniqueResults = deduplicateWithSourceMerging(allResults);
-        
+
         // Finalize results
         const finalResults = finalizeResults(uniqueResults);
-        
+
         // Generate summary
         const summary = generateSearchSummary(query, finalResults, allResults, uniqueResults, performanceStats, perSourceLimit, totalSources);
 

@@ -53,8 +53,6 @@ derby.log
 ### Node.js ###
 node/
 node_modules/
-package-lock.json
-package.json
 
 ### Other ###
 .antlr/
